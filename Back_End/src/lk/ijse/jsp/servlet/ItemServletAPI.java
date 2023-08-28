@@ -22,77 +22,102 @@ public class ItemServletAPI extends HttpServlet {
         try {
             Class.forName("com.mysql.jdbc.Driver");
             Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/company", "root", "1234");
-            PreparedStatement pstm = connection.prepareStatement("select * from item");
+           /* PreparedStatement pstm = connection.prepareStatement("select * from item");
             ResultSet result = pstm.executeQuery();
-           // resp.addHeader("Content-Type","application/json");
-/*
-            ArrayList<ItemDTO> allItems = new ArrayList<>();
+            JsonArrayBuilder arrayBuilderItem = Json.createArrayBuilder();*/
+            String option = req.getParameter("option");
 
-            while (rst.next()) {
-                String code = rst.getString(1);
-                String name = rst.getString(2);
-                int qtyOnHand = rst.getInt(3);
-                double unitPrice = rst.getDouble(4);
-                allItems.add(new ItemDTO(code, name, qtyOnHand, unitPrice));
+            switch (option) {
+                case "getAll":
+                    PreparedStatement pstm = connection.prepareStatement("select * from item");
+                    ResultSet result = pstm.executeQuery();
+                    resp.addHeader("Content-Type", "application/json");
+                    resp.addHeader("Access-Control-Allow-Origin", "*");
+                    JsonArrayBuilder arrayBuilderItem = Json.createArrayBuilder();
+
+
+                    while (result.next()) {
+                        String code = result.getString(1);
+                        String description = result.getString(2);
+                        String qtyOnHand = result.getString(3);
+                        String unitPrice = result.getString(4);
+
+                        JsonObjectBuilder itemObject = Json.createObjectBuilder();
+                        itemObject.add("code", code);
+                        itemObject.add("description", description);
+                        itemObject.add("qtyOnHand", qtyOnHand);
+                        itemObject.add("unitPrice", unitPrice);
+                        arrayBuilderItem.add(itemObject.build());
+
+                    }
+
+                    resp.setContentType("application/json");
+                    resp.getWriter().print(arrayBuilderItem.build());
+                    JsonObjectBuilder responseObj = Json.createObjectBuilder();
+                    responseObj.add("Status", "ok");
+                    responseObj.add("message", "Successfully Loaded...!");
+                    responseObj.add("data", arrayBuilderItem.build());
+
+                    break;
+                case "search":
+                    String itemCode = req.getParameter("code");
+                    if (itemCode != null && !itemCode.isEmpty()) {
+                        PreparedStatement pstm1 = connection.prepareStatement("SELECT * FROM item WHERE code = ?");
+                        pstm1.setString(1, itemCode);
+                        ResultSet rst1 = pstm1.executeQuery();
+                        JsonArrayBuilder jsonArrayBuilder1 = Json.createArrayBuilder();
+                        while (rst1.next()) {
+                            JsonObjectBuilder itemObject = Json.createObjectBuilder();
+                            itemObject.add("code", rst1.getString("code"));
+                            itemObject.add("description", rst1.getString("name"));
+                            itemObject.add("qty", rst1.getDouble("qty"));
+                            itemObject.add("price", rst1.getDouble("price"));
+
+                            jsonArrayBuilder1.add(itemObject.build());
+                        }
+                        resp.setContentType("application/json");
+                        JsonObjectBuilder responseObj1 = Json.createObjectBuilder();
+                        responseObj1.add("Status", "ok");
+                        responseObj1.add("message", "Successfully Loaded...!");
+                        responseObj1.add("data", jsonArrayBuilder1.build());
+                        resp.getWriter().print(responseObj1.build());
+
+
+                    }
+                    break;
+                case "loadCode":
+                    PreparedStatement pstm2 = connection.prepareStatement("SELECT code FROM item");
+                    try (ResultSet rst2= pstm2.executeQuery()) {
+                        JsonArrayBuilder jsonArrayBuilder2 = Json.createArrayBuilder();
+                        while (rst2.next()) {
+                            String id = rst2.getString("code");
+
+                            JsonObjectBuilder itemObject = Json.createObjectBuilder();
+                            itemObject.add("code", id);
+
+                            jsonArrayBuilder2.add(itemObject);
+                        }
+
+                        resp.setContentType("application/json");
+                        JsonObjectBuilder responseObj1 = Json.createObjectBuilder();
+                        responseObj1.add("Status", "ok");
+                        responseObj1.add("message", "Successfully Loaded...!");
+                        responseObj1.add("data", jsonArrayBuilder2.build());
+                        resp.getWriter().print(responseObj1.build());
+                    }
+
             }
 
-            req.setAttribute("keyTwo", allItems);
+            } catch(ClassNotFoundException e){
+                throw new RuntimeException(e);
+            } catch(SQLException e){
+            JsonObjectBuilder error = Json.createObjectBuilder();
+            error.add("Status", "Error");
+            error.add("message", e.getLocalizedMessage());
+            error.add("data", "");
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.getWriter().print(error.build());
 
-            req.getRequestDispatcher("item.html").forward(req, resp);*/
-/*
-
-
-            String JSON = "[";
-            while (rst.next()) {
-                String item="{";
-                String code = rst.getString(1);
-                String description = rst.getString(2);
-                String qtyOnHand = rst.getString(3);
-                String unitPrice = rst.getString(4);
-                item+="\"code\":\""+code+"\",";
-                item+="\"description\":\""+description+"\",";
-                item+="\"qtyOnHand\":\""+qtyOnHand+"\"";
-                item+="\"unitPrice\":\""+unitPrice+"\"";
-                item+="}";
-                JSON+=item+",";
-            }
-            JSON=JSON.substring(0,JSON.length()-1);
-            JSON+="]";
-            resp.setContentType("application/json");
-            resp.getWriter().print(JSON);
-
-*/
-
-            JsonArrayBuilder arrayBuilderItem = Json.createArrayBuilder();
-            while (result.next()){
-                String code = result.getString(1);
-                String description = result.getString(2);
-                String qtyOnHand = result.getString(3);
-                String unitPrice = result.getString(4);
-
-                JsonObjectBuilder itemObject= Json.createObjectBuilder();
-                itemObject.add("code",code);
-                itemObject.add("description",description);
-                itemObject.add("qtyOnHand",qtyOnHand);
-                itemObject.add("unitPrice",unitPrice);
-                arrayBuilderItem.add(itemObject.build());
-
-            }
-
-            resp.setContentType("application/json");
-            resp.getWriter().print(arrayBuilderItem.build());
-
-
-
-
-
-
-
-
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
 
     }
