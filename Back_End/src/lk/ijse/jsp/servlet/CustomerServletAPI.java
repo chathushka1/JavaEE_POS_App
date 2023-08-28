@@ -1,7 +1,5 @@
 package lk.ijse.jsp.servlet;
 
-import lk.ijse.jsp.dto.CustomerDTO;
-
 import javax.json.*;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -10,18 +8,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.*;
-import java.util.ArrayList;
-
-//http://localhost:8080/pos_one/customer
-//http://localhost:8080/pos_one/pages/customer? 404
-//http://localhost:8080/customer? 404
-
-//http://localhost:8080/pos_one/pages/customer//
-//http:://localhost:8080/pos_one/pages/customer
-//http:://localhost:8080/pos_one/pages/customer
 
 @WebServlet(urlPatterns = {"/pages/customer"})
-public class CustomerServlet extends HttpServlet {
+public class CustomerServletAPI extends HttpServlet {
+
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -30,10 +20,10 @@ public class CustomerServlet extends HttpServlet {
 
             Class.forName("com.mysql.jdbc.Driver");
         Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/company", "root", "1234");
-        PreparedStatement pstm = connection.prepareStatement("select * from customer");
+       /* PreparedStatement pstm = connection.prepareStatement("select * from customer");
         ResultSet rst = pstm.executeQuery();
-        resp.addHeader("Access-Control-Allow-Origin","*");
-
+        resp.addHeader("Access-Control-Allow-Origin","*");*/
+        String option = req.getParameter("option");
        /* String JSON = "[";
         while (rst.next()) {
             String customer="{";
@@ -51,25 +41,59 @@ public class CustomerServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.getWriter().print(JSON);
 */
+            switch (option) {
+                case "getAll":
+                    PreparedStatement pstm = connection.prepareStatement("select * from customer");
+                    ResultSet rst = pstm.executeQuery();
+                    resp.addHeader("Content-Type", "application/json");
+                    resp.addHeader("Access-Control-Allow-Origin", "*");
+                    JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
 
-            JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
-            while (rst.next()){
-                String id = rst.getString(1);
-                String name = rst.getString(2);
-                String address = rst.getString(3);
+                    while (rst.next()) {
+                        String id = rst.getString(1);
+                        String name = rst.getString(2);
+                        String address = rst.getString(3);
 
-                JsonObjectBuilder customerObject= Json.createObjectBuilder();
-                customerObject.add("id",id);
-                customerObject.add("name",name);
-                customerObject.add("address",address);
-                arrayBuilder.add(customerObject.build());
+                        JsonObjectBuilder customerObject = Json.createObjectBuilder();
+                        customerObject.add("id", id);
+                        customerObject.add("name", name);
+                        customerObject.add("address", address);
+                        arrayBuilder.add(customerObject.build());
 
-            }
+                    }
 
-            resp.setContentType("application/json");
-            resp.getWriter().print(arrayBuilder.build());
+                    resp.setContentType("application/json");
+                    JsonObjectBuilder responseObj = Json.createObjectBuilder();
 
+                    resp.getWriter().print(arrayBuilder.build());
+                    responseObj.add("Status", "ok");
+                    responseObj.add("message", "Successfully Loaded...!");
+                    responseObj.add("data", arrayBuilder.build());
+                    resp.getWriter().print(responseObj.build());
+                    break;
 
+                case "search":
+                    String cusId = req.getParameter("cusId");
+                    PreparedStatement pstm1 = connection.prepareStatement("SELECT * FROM customer WHERE id = ?");
+                    pstm1.setString(1, cusId);
+                    ResultSet rst1 = pstm1.executeQuery();
+                    JsonArrayBuilder jsonArrayBuilder1 = Json.createArrayBuilder();
+                    while (rst1.next()) {
+                        JsonObjectBuilder itemObject = Json.createObjectBuilder();
+                        itemObject.add("id", rst1.getString("id"));
+                        itemObject.add("name", rst1.getString("name"));
+                        itemObject.add("address", rst1.getString("address"));
+
+                        jsonArrayBuilder1.add(itemObject);
+                    }
+
+                    resp.setContentType("application/json");
+                    JsonObjectBuilder responseObj1 = Json.createObjectBuilder();
+                    responseObj1.add("Status", "ok");
+                    responseObj1.add("message", "Successfully Loaded...!");
+                    responseObj1.add("data", jsonArrayBuilder1.build());
+                    resp.getWriter().print(responseObj1.build());
+                    break;
 
 
 
@@ -102,6 +126,7 @@ public class CustomerServlet extends HttpServlet {
 
 
 */
+            }
     } catch (ClassNotFoundException e) {
         throw new RuntimeException(e);
     } catch (SQLException e) {
@@ -183,6 +208,38 @@ public class CustomerServlet extends HttpServlet {
             //throw new RuntimeException(e);
         }
     }
+        @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.addHeader("Access-Control-Allow-Origin", "*");
+        resp.addHeader("Content-Type", "application/json");
+        String cusID = req.getParameter("id");
+
+
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+
+            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/AssCompany", "root", "1234");
+            PreparedStatement pstm2 = connection.prepareStatement("delete from customer where id=?");
+            pstm2.setObject(1, cusID);
+            if (pstm2.executeUpdate() > 0) {
+                JsonObjectBuilder responseObj = Json.createObjectBuilder();
+                responseObj.add("Status","ok");
+                responseObj.add("message","Successfully Deleted...!");
+                responseObj.add("data","");
+                resp.setStatus(HttpServletResponse.SC_OK);
+                resp.getWriter().print(responseObj.build());
+
+            }
+        } catch (ClassNotFoundException | SQLException e) {
+            JsonObjectBuilder error = Json.createObjectBuilder();
+            error.add("Status","Error");
+            error.add("message",e.getLocalizedMessage());
+            error.add("data","");
+            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            resp.getWriter().print(error.build());
+
+        }
+    }
 
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
@@ -211,5 +268,12 @@ public class CustomerServlet extends HttpServlet {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+    @Override
+    protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.addHeader("Access-Control-Allow-Origin", "*");
+        resp.addHeader("Access-Control-Allow-Methods","PUT,DELETE");
+        resp.addHeader("Access-Control-Allow-Headers","content-type");
+
     }
 }

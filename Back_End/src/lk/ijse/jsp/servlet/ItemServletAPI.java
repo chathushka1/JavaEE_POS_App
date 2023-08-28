@@ -15,7 +15,7 @@ import java.sql.*;
 import java.util.ArrayList;
 
 @WebServlet(urlPatterns = "/pages/item")
-public class ItemServlet extends HttpServlet {
+public class ItemServletAPI extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
